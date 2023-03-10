@@ -1,0 +1,32 @@
+import Joi from "joi";
+
+export const validation = Joi.object({
+  Title: Joi.string().required(),
+  Year: Joi.number().required(),
+  Rated: Joi.string(),
+  Released: Joi.string(),
+  Runtime: Joi.string(),
+  Genre: Joi.string(),
+  Director: Joi.string(),
+  Writer: Joi.string(),
+  Actors: Joi.string(),
+  Plot: Joi.string(),
+  Language: Joi.string(),
+  Country: Joi.string(),
+  Awards: Joi.string(),
+  Ratings: Joi.object({
+    Source: Joi.string(),
+    Value: Joi.string(),
+  }),
+  Metascore: Joi.string(),
+  imdbRating: Joi.string(),
+  imdbVotes: Joi.string(),
+  DVD: Joi.string(),
+  BoxOffice: Joi.string(),
+  Production: Joi.string(),
+  Website: Joi.string(),
+  Response: Joi.string(),
+  imdbID: Joi.string(),
+  Type: Joi.string().required(),
+  Poster: Joi.string(),
+}).required();
