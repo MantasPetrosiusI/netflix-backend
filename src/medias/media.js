@@ -67,7 +67,6 @@ mediaRouter.get("/", async (req, res, next) => {
   try {
     const movies = await getMovies();
     const query = req.query;
-
     if (query && query.Title) {
       const filteredMedia = movies.filter((media) =>
         media.Title.toLocaleLowerCase().includes(
@@ -78,11 +77,9 @@ mediaRouter.get("/", async (req, res, next) => {
         res.send({ media: filteredMedia });
       } else {
         const omdb = await fetch(
-          `http://www.omdbapi.com/?i=tt3896198&apikey=${process.env.omdbAPI}&s=${query}&r=json&page=1`
+          `http://www.omdbapi.com/?apikey=${process.env.omdbAPI}&s=${query.Title}&r=json&page=1`
         );
-
         const omdbData = await omdb.json();
-        console.log(omdbData);
         if (omdbData.Response === "True") {
           const omdbSearch = omdbData.Search;
 
@@ -105,6 +102,77 @@ mediaRouter.get("/", async (req, res, next) => {
   }
 });
 
+mediaRouter.get("/:id/reviews", async (req, res, next) => {
+  try {
+    const movies = await getMovies();
+    const index = movies.findIndex((movie) => movie.id === req.params.id);
+    res.send(movies[index]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+mediaRouter.post("/:id/reviews", async (req, res, next) => {
+  try {
+    const movies = await getMovies();
+    const index = movies.findIndex((movie) => movie.id === req.params.id);
+    const newReview = {
+      _id: uniqid(),
+      ...req.body,
+      createdAt: new Date(),
+    };
+    console.log(movies[index]);
+    movies[index].reviews.push(newReview);
+    await writeMovies(movies);
+    res.status(201).send(movies[index].reviews);
+  } catch (error) {
+    next(error);
+  }
+});
+
+mediaRouter.put("/:id/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const movies = await getMovies();
+    let reviewIndex = 0;
+    const movieIndex = movies.findIndex((movie) => movie.id === req.params.id);
+    if (!movieIndex == -1) {
+      res.status(404).send({ message: `It's 404 you know what it means X)` });
+    } else {
+      reviewIndex = movies[movieIndex].reviews.findIndex(
+        (review) => review._id === req.params.reviewId
+      );
+    }
+    const preEdit = movies[movieIndex].reviews[reviewIndex];
+    const afterEdit = {
+      ...preEdit,
+      ...req.body,
+      updatedAt: new Date(),
+    };
+    movies[movieIndex].reviews[reviewIndex] = afterEdit;
+    await writeMovies(movies);
+    res.status(202).send(afterEdit);
+  } catch (error) {
+    next(error);
+  }
+});
+
+mediaRouter.delete("/:id/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const movies = await getMovies();
+    const index = movies.findIndex((movie) => movie.imdID === req.params.id);
+    const oldMovie = movies[index];
+    const newReviews = oldMovie.reviews.filter(
+      (review) => review._id !== req.params.reviewId
+    );
+    const newReview = { ...oldMovie, reviews: newReviews };
+    movies[index] = newReview;
+    await writeBlogPosts(movies);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 mediaRouter.post(
   "/:id/poster",
   savePosterCloudinary,
@@ -114,6 +182,7 @@ mediaRouter.post(
       const index = movies.findIndex((movie) => movie.imdID === req.params.id);
       if (index !== -1) {
         movies[index].Poster = req.file.path;
+        console.log(movies[index].Poster);
         await writeMovies(movies);
         res.status(201).send({ message: `Uploaded :)` });
       }

@@ -1,8 +1,5 @@
 import PdfPrinter from "pdfmake";
 import imageToBase64 from "image-to-base64";
-import { getMoviesPDFWriteStream } from "./fs-tools.js";
-import { pipeline } from "stream";
-import { promisify } from "util";
 
 export const getMovieReadableStream = async (movie) => {
   const posterToBase64 = await imageToBase64(movie.Poster);
