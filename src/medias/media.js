@@ -1,15 +1,13 @@
 import express from "express";
 import createError from "http-errors";
 import uniqid from "uniqid";
-import { pipeline } from "stream";
 import { validation } from "./validation.js";
 import {
   getMovies,
   writeMovies,
   savePosterCloudinary,
-  moviesJSONPath,
 } from "../lib/fs-tools.js";
-import { getMovieReadableStream } from "../lib/pdf-tools.js";
+import { asyncMoviesPDFGenerator } from "../lib/pdf-tools.js";
 
 const mediaRouter = express.Router();
 
@@ -182,10 +180,10 @@ mediaRouter.post(
       const index = movies.findIndex((movie) => movie.imdID === req.params.id);
       if (index !== -1) {
         movies[index].Poster = req.file.path;
-        console.log(movies[index].Poster);
         await writeMovies(movies);
         res.status(201).send({ message: `Uploaded :)` });
       }
+      res.send(`Uploaded!`);
     } catch (error) {
       next(error);
     }
@@ -195,23 +193,10 @@ mediaRouter.post(
 mediaRouter.get("/:id/pdf", async (req, res, next) => {
   try {
     const movies = await getMovies();
-    const movieToPDF = movies.find((movie) => movie.imdID === req.params.id);
-    if (movieToPDF) {
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=${movieToPDF.Title}.pdf`
-      );
-      const source = await getMovieReadableStream(movieToPDF);
-      const destination = res;
-      pipeline(source, destination, (err) => {
-        if (err) {
-          console.log(err);
-        }
-        res.send(`ok`);
-      });
-    } else {
-      createError(404, `It's 404 regarding pdf, you know what that means.`);
-    }
+    const movie = movies.find((m) => m.imdbID === req.params.id);
+    console.log(movie);
+    await asyncMoviesPDFGenerator(movie);
+    res.send("OK");
   } catch (error) {
     next(error);
   }
