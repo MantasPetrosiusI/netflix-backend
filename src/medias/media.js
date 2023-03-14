@@ -6,6 +6,8 @@ import {
   getMovies,
   writeMovies,
   savePosterCloudinary,
+  getReviews,
+  writeReviews,
 } from "../lib/fs-tools.js";
 import { asyncMoviesPDFGenerator } from "../lib/pdf-tools.js";
 
@@ -48,7 +50,7 @@ mediaRouter.get("/:id", async (req, res, next) => {
   try {
     const movies = await getMovies();
     const movie = movies.find(
-      (singleMovie) => singleMovie.imdID === req.params.id
+      (singleMovie) => singleMovie.imdbID === req.params.id
     );
     if (!movie) {
       res.status(404).send({
@@ -103,8 +105,13 @@ mediaRouter.get("/", async (req, res, next) => {
 mediaRouter.get("/:id/reviews", async (req, res, next) => {
   try {
     const movies = await getMovies();
-    const index = movies.findIndex((movie) => movie.id === req.params.id);
-    res.send(movies[index]);
+    const index = movies.find((movie) => movie.imdbID === req.params.id);
+    const reviews = await getReviews();
+    console.log(reviews);
+    const reviewArray = reviews.find(
+      (review) => review.movieId === index.imdbID
+    );
+    res.send(reviewArray);
   } catch (error) {
     next(error);
   }
@@ -113,15 +120,18 @@ mediaRouter.get("/:id/reviews", async (req, res, next) => {
 mediaRouter.post("/:id/reviews", async (req, res, next) => {
   try {
     const movies = await getMovies();
-    const index = movies.findIndex((movie) => movie.id === req.params.id);
+    const reviews = await getReviews();
+    const index = movies.findIndex((movie) => movie.imdbID === req.params.id);
+    console.log(index);
     const newReview = {
       _id: uniqid(),
+      movieId: movies[index].imdbID,
       ...req.body,
       createdAt: new Date(),
     };
-    console.log(movies[index]);
-    movies[index].reviews.push(newReview);
-    await writeMovies(movies);
+    console.log(newReview);
+    reviews.push(newReview);
+    await writeReviews(reviews);
     res.status(201).send(movies[index].reviews);
   } catch (error) {
     next(error);
@@ -132,7 +142,9 @@ mediaRouter.put("/:id/reviews/:reviewId", async (req, res, next) => {
   try {
     const movies = await getMovies();
     let reviewIndex = 0;
-    const movieIndex = movies.findIndex((movie) => movie.id === req.params.id);
+    const movieIndex = movies.findIndex(
+      (movie) => movie.imdbID === req.params.id
+    );
     if (!movieIndex == -1) {
       res.status(404).send({ message: `It's 404 you know what it means X)` });
     } else {
@@ -157,7 +169,7 @@ mediaRouter.put("/:id/reviews/:reviewId", async (req, res, next) => {
 mediaRouter.delete("/:id/reviews/:reviewId", async (req, res, next) => {
   try {
     const movies = await getMovies();
-    const index = movies.findIndex((movie) => movie.imdID === req.params.id);
+    const index = movies.findIndex((movie) => movie.imdbID === req.params.id);
     const oldMovie = movies[index];
     const newReviews = oldMovie.reviews.filter(
       (review) => review._id !== req.params.reviewId
@@ -177,7 +189,7 @@ mediaRouter.post(
   async (req, res, next) => {
     try {
       const movies = await getMovies();
-      const index = movies.findIndex((movie) => movie.imdID === req.params.id);
+      const index = movies.findIndex((movie) => movie.imdbID === req.params.id);
       if (index !== -1) {
         movies[index].Poster = req.file.path;
         await writeMovies(movies);
